@@ -1,10 +1,10 @@
-PROJECT_NAME := Pulumi Xyz Resource Provider
+PROJECT_NAME := Pulumi IBM Cloud Resource Provider
 
-PACK             := xyz
+PACK             := ibmcloud
 PACKDIR          := sdk
-PROJECT          := github.com/pulumi/pulumi-xyz
-NODE_MODULE_NAME := @pulumi/xyz
-NUGET_PKG_NAME   := Pulumi.Xyz
+PROJECT          := github.com/adrianriobo/pulumi-ibmcloud
+NODE_MODULE_NAME := @pulumi/ibmcloud
+NUGET_PKG_NAME   := Pulumi.ibmcloud
 
 PROVIDER        := pulumi-resource-${PACK}
 VERSION         ?= $(shell pulumictl get version)
@@ -16,10 +16,12 @@ GOPATH			:= $(shell go env GOPATH)
 WORKING_DIR     := $(shell pwd)
 TESTPARALLELISM := 4
 
+CONTAINER_RUNTIME ?= podman
+PULUMI_PROVIDER_TOOLSET_OCI ?= quay.io/ariobolo/pulumi-provider-toolset:v0.1
+
 ensure::
 	cd provider && go mod tidy
 	cd sdk && go mod tidy
-	cd tests && go mod tidy
 
 provider::
 	(cd provider && go build -o $(WORKING_DIR)/bin/${PROVIDER} -ldflags "-X ${PROJECT}/${VERSION_PATH}=${VERSION}" $(PROJECT)/${PROVIDER_PATH}/cmd/$(PROVIDER))
@@ -105,3 +107,11 @@ install_go_sdk::
 install_nodejs_sdk::
 	-yarn unlink --cwd $(WORKING_DIR)/sdk/nodejs/bin
 	yarn link --cwd $(WORKING_DIR)/sdk/nodejs/bin
+
+toolset-build::
+	${CONTAINER_RUNTIME} run -it --rm \
+		-w /data -v ${PWD}:/data:Z \
+		--entrypoint=make ${PULUMI_PROVIDER_TOOLSET_OCI} ensure
+	${CONTAINER_RUNTIME} run -it --rm \
+		-w /data -v ${PWD}:/data:Z \
+		--entrypoint=make ${PULUMI_PROVIDER_TOOLSET_OCI} build
